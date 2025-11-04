@@ -247,6 +247,25 @@ export default function App() {
 
   const total = Math.max(subtotal - discount, 0);
 
+  async function postWithRetry(url, options, retries = 2) {
+    try {
+      const res = await fetch(url, options);
+      if (res.status === 429 && retries > 0) {
+        // Exponential backoff to gracefully handle high demand
+        const wait = 500 * Math.pow(2, 2 - retries);
+        await new Promise((r) => setTimeout(r, wait));
+        return await postWithRetry(url, options, retries - 1);
+      }
+      return res;
+    } catch (e) {
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 500));
+        return await postWithRetry(url, options, retries - 1);
+      }
+      throw e;
+    }
+  }
+
   const placeOrder = async () => {
     if (items.length === 0) {
       alert("Your cart is empty.");
@@ -266,10 +285,6 @@ export default function App() {
       return;
     }
 
-    // Save customer details on successful confirmation
-    localStorage.setItem("bb_customer_name", name);
-    localStorage.setItem("bb_customer_mobile", mobile);
-
     const payload = {
       customer_name: name,
       customer_mobile: mobile,
@@ -283,17 +298,31 @@ export default function App() {
 
     setPlacing(true);
     try {
-      const res = await fetch(`${API_BASE}/orders`, {
+      const res = await postWithRetry(`${API_BASE}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || "Failed to place order");
+        const maybeJson = await res.text();
+        let detail = maybeJson;
+        try {
+          const parsed = JSON.parse(maybeJson);
+          detail = parsed?.detail || maybeJson;
+        } catch {}
+        if (res.status === 429) {
+          throw new Error("We’re experiencing high demand. Please try again in a few seconds.");
+        }
+        throw new Error(detail || "Failed to place order");
       }
+
       const data = await res.json();
       const orderId = data?.id || "";
+
+      // Persist customer details only after a successful order
+      localStorage.setItem("bb_customer_name", name);
+      localStorage.setItem("bb_customer_mobile", mobile);
 
       const summary = `Order placed!\nOrder ID: ${orderId}\nName: ${name}\nMobile: ${mobile}\nItems: ${items
         .map((i) => `${i.name} x${i.qty}`)

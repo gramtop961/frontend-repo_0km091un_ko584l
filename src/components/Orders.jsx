@@ -16,6 +16,24 @@ export default function Orders({ customerMobile }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerMobile]);
 
+  async function fetchWithRetry(url, retries = 2) {
+    try {
+      const res = await fetch(url);
+      if (res.status === 429 && retries > 0) {
+        const wait = 400 * Math.pow(2, 2 - retries);
+        await new Promise((r) => setTimeout(r, wait));
+        return await fetchWithRetry(url, retries - 1);
+      }
+      return res;
+    } catch (e) {
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 400));
+        return await fetchWithRetry(url, retries - 1);
+      }
+      throw e;
+    }
+  }
+
   const fetchOrders = async () => {
     setError("");
     const digits = (mobile || "").replace(/\D/g, "");
@@ -25,8 +43,14 @@ export default function Orders({ customerMobile }) {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/orders?mobile=${digits}`);
-      if (!res.ok) throw new Error("Failed to fetch orders");
+      const res = await fetchWithRetry(`${API_BASE}/orders?mobile=${digits}`);
+      if (!res.ok) {
+        const txt = await res.text();
+        if (res.status === 429) {
+          throw new Error("We’re experiencing high demand. Please try again shortly.");
+        }
+        throw new Error(txt || "Failed to fetch orders");
+      }
       const data = await res.json();
       setOrders(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -52,7 +76,7 @@ export default function Orders({ customerMobile }) {
           />
           <button
             onClick={fetchOrders}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-50"
             disabled={loading}
           >
             {loading ? "Loading..." : "Load"}
