@@ -1,17 +1,49 @@
-import { CreditCard, Wallet, Banknote } from "lucide-react";
+import { Wallet, Banknote, User, Phone } from "lucide-react";
 
 const methods = [
   { id: "cod", label: "Cash on Delivery", icon: Banknote },
-  { id: "card", label: "Card", icon: CreditCard },
   { id: "upi", label: "UPI", icon: Wallet },
 ];
 
-export default function Checkout({ total, paymentMethod, setPaymentMethod, onPlaceOrder, disabled }) {
+export default function Checkout({
+  total,
+  paymentMethod,
+  setPaymentMethod,
+  onPlaceOrder,
+  disabled,
+  customerName,
+  setCustomerName,
+  customerMobile,
+  setCustomerMobile,
+}) {
   return (
     <section id="checkout" className="bg-white rounded-2xl border p-5">
       <h2 className="text-xl font-semibold text-gray-800 mb-4">Checkout</h2>
 
-      <div className="grid sm:grid-cols-3 gap-3 mb-6">
+      <div className="grid sm:grid-cols-2 gap-3 mb-6">
+        <div className="flex items-center gap-2">
+          <User size={18} className="text-gray-500" />
+          <input
+            type="text"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            placeholder="Your name"
+            className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Phone size={18} className="text-gray-500" />
+          <input
+            type="tel"
+            value={customerMobile}
+            onChange={(e) => setCustomerMobile(e.target.value)}
+            placeholder="Mobile number"
+            className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-3 mb-6">
         {methods.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -23,7 +55,7 @@ export default function Checkout({ total, paymentMethod, setPaymentMethod, onPla
             <Icon className={paymentMethod === id ? "text-emerald-600" : "text-gray-600"} size={20} />
             <div>
               <p className="font-medium text-gray-800">{label}</p>
-              <p className="text-xs text-gray-500">{id === "cod" ? "Pay when you receive your order" : id === "card" ? "All major cards supported" : "Pay with UPI apps"}</p>
+              <p className="text-xs text-gray-500">{id === "cod" ? "Pay when you receive your order" : "Pay with UPI apps"}</p>
             </div>
           </button>
         ))}

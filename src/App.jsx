@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Navbar from "./components/Navbar";
 import Menu from "./components/Menu";
 import Cart from "./components/Cart";
@@ -179,7 +179,17 @@ export default function App() {
   const [couponCode, setCouponCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [customerName, setCustomerName] = useState("");
+  const [customerMobile, setCustomerMobile] = useState("");
   const cartRef = useRef(null);
+
+  useEffect(() => {
+    // Prefill from previous checkout if available
+    const savedName = localStorage.getItem("bb_customer_name");
+    const savedMobile = localStorage.getItem("bb_customer_mobile");
+    if (savedName) setCustomerName(savedName);
+    if (savedMobile) setCustomerMobile(savedMobile);
+  }, []);
 
   const addToCart = (item) => {
     setCart((prev) => {
@@ -218,7 +228,6 @@ export default function App() {
   const subtotal = items.reduce((sum, it) => sum + it.price * it.qty, 0);
 
   const applyCoupon = () => {
-    // Example: DEMO10 => 10% off
     const code = couponCode.trim().toUpperCase();
     if (!code) {
       setDiscount(0);
@@ -240,11 +249,30 @@ export default function App() {
       alert("Your cart is empty.");
       return;
     }
-    const summary = `Order placed!\nItems: ${items
+
+    const name = customerName.trim();
+    const mobile = customerMobile.trim();
+
+    if (!name) {
+      alert("Please enter your name.");
+      return;
+    }
+
+    if (!mobile || !/^\d{10}$/.test(mobile)) {
+      alert("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    // Save customer details on successful confirmation
+    localStorage.setItem("bb_customer_name", name);
+    localStorage.setItem("bb_customer_mobile", mobile);
+
+    const summary = `Order placed!\nName: ${name}\nMobile: ${mobile}\nItems: ${items
       .map((i) => `${i.name} x${i.qty}`)
       .join(", ")}\nSubtotal: ₹${subtotal}\nDiscount: ₹${discount}\nTotal: ₹${total}\nPayment: ${paymentMethod.toUpperCase()}`;
     alert(summary);
-    // Reset cart
+
+    // Reset cart (keep name & mobile for convenience)
     setCart({});
     setCouponCode("");
     setDiscount(0);
@@ -291,13 +319,17 @@ export default function App() {
             setPaymentMethod={setPaymentMethod}
             onPlaceOrder={placeOrder}
             disabled={items.length === 0}
+            customerName={customerName}
+            setCustomerName={setCustomerName}
+            customerMobile={customerMobile}
+            setCustomerMobile={setCustomerMobile}
           />
         </div>
       </main>
 
       <footer className="border-t bg-white">
         <div className="max-w-6xl mx-auto px-4 py-6 text-sm text-gray-500 flex items-center justify-between">
-          <p>© {new Date().getFullYear()} SpiceHub Restaurant. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Bits & Bites. All rights reserved.</p>
           <p>Made with love for great food.</p>
         </div>
       </footer>

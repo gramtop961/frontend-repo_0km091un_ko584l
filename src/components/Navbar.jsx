@@ -7,7 +7,7 @@ export default function Navbar({ cartCount, onGoToCart }) {
         <div className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600" />
           <div>
-            <h1 className="text-xl font-bold tracking-tight">SpiceHub Restaurant</h1>
+            <h1 className="text-xl font-bold tracking-tight">Bits & Bites</h1>
             <p className="text-xs text-gray-500 -mt-0.5">Tastes that feel like home</p>
           </div>
         </div>
