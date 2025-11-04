@@ -3,6 +3,9 @@ import Navbar from "./components/Navbar";
 import Menu from "./components/Menu";
 import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
+import Orders from "./components/Orders";
+
+const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 function buildMenu() {
   return [
@@ -181,10 +184,10 @@ export default function App() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [customerName, setCustomerName] = useState("");
   const [customerMobile, setCustomerMobile] = useState("");
+  const [placing, setPlacing] = useState(false);
   const cartRef = useRef(null);
 
   useEffect(() => {
-    // Prefill from previous checkout if available
     const savedName = localStorage.getItem("bb_customer_name");
     const savedMobile = localStorage.getItem("bb_customer_mobile");
     if (savedName) setCustomerName(savedName);
@@ -244,7 +247,7 @@ export default function App() {
 
   const total = Math.max(subtotal - discount, 0);
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (items.length === 0) {
       alert("Your cart is empty.");
       return;
@@ -267,16 +270,45 @@ export default function App() {
     localStorage.setItem("bb_customer_name", name);
     localStorage.setItem("bb_customer_mobile", mobile);
 
-    const summary = `Order placed!\nName: ${name}\nMobile: ${mobile}\nItems: ${items
-      .map((i) => `${i.name} x${i.qty}`)
-      .join(", ")}\nSubtotal: ₹${subtotal}\nDiscount: ₹${discount}\nTotal: ₹${total}\nPayment: ${paymentMethod.toUpperCase()}`;
-    alert(summary);
+    const payload = {
+      customer_name: name,
+      customer_mobile: mobile,
+      items: items.map((i) => ({ name: i.name, price: i.price, qty: i.qty })),
+      subtotal,
+      discount,
+      total,
+      payment_method: paymentMethod,
+      coupon_code: couponCode || null,
+    };
 
-    // Reset cart (keep name & mobile for convenience)
-    setCart({});
-    setCouponCode("");
-    setDiscount(0);
-    setPaymentMethod("cod");
+    setPlacing(true);
+    try {
+      const res = await fetch(`${API_BASE}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Failed to place order");
+      }
+      const data = await res.json();
+      const orderId = data?.id || "";
+
+      const summary = `Order placed!\nOrder ID: ${orderId}\nName: ${name}\nMobile: ${mobile}\nItems: ${items
+        .map((i) => `${i.name} x${i.qty}`)
+        .join(", ")}\nSubtotal: ₹${subtotal}\nDiscount: ₹${discount}\nTotal: ₹${total}\nPayment: ${paymentMethod.toUpperCase()}`;
+      alert(summary);
+
+      setCart({});
+      setCouponCode("");
+      setDiscount(0);
+      setPaymentMethod("cod");
+    } catch (e) {
+      alert(e.message || "Failed to place order");
+    } finally {
+      setPlacing(false);
+    }
   };
 
   const goToCart = () => {
@@ -318,12 +350,14 @@ export default function App() {
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
             onPlaceOrder={placeOrder}
-            disabled={items.length === 0}
+            disabled={items.length === 0 || placing}
             customerName={customerName}
             setCustomerName={setCustomerName}
             customerMobile={customerMobile}
             setCustomerMobile={setCustomerMobile}
           />
+
+          <Orders customerMobile={customerMobile} />
         </div>
       </main>
 

@@ -1,4 +1,4 @@
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, History } from "lucide-react";
 
 export default function Navbar({ cartCount, onGoToCart }) {
   return (
@@ -15,6 +15,7 @@ export default function Navbar({ cartCount, onGoToCart }) {
           <a href="#menu" className="hover:text-gray-900">Menu</a>
           <a href="#cart" className="hover:text-gray-900">Cart</a>
           <a href="#checkout" className="hover:text-gray-900">Checkout</a>
+          <a href="#orders" className="hover:text-gray-900 inline-flex items-center gap-1"><History size={14}/> Orders</a>
         </nav>
         <button
           onClick={onGoToCart}
